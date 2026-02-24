@@ -45,8 +45,8 @@ DEFAULT_FALLBACK_TOPICS = [
 
 @register(
     "astrbot_plugin_topic_starter",
-    "A-Dawn & Codex",
-    "Topic Starter：主动话题发起、会话跟踪、可配置调度",
+    "薄暝",
+    "主动话题发起、会话跟踪、可配置调度",
     "0.1.0",
     "https://github.com/AstrBotDevs/AstrBot",
 )

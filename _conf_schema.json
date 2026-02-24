@@ -30,6 +30,13 @@
     "description": "每个会话保留的最近消息条数",
     "default": 20
   },
+  "chat_provider_id": {
+    "type": "string",
+    "description": "指定用于主动发言文案生成的模型提供商（可选）",
+    "hint": "为空时将自动使用当前会话模型；建议在这里固定一个可用 provider。",
+    "_special": "select_provider",
+    "default": ""
+  },
   "fallback_topics": {
     "type": "list",
     "description": "兜底话题列表。格式：标题|描述",

@@ -135,6 +135,7 @@ class TopicStarterPlugin(Star):
             f"- 触发概率: {settings.trigger_probability:.2f}",
             f"- 冷却时间: {settings.cooldown_seconds}s",
             f"- 静默阈值: {settings.silence_seconds}s",
+            f"- 指定模型提供商: {settings.chat_provider_id or '自动使用当前会话'}",
         ]
 
         if stream is None or not stream.active:
@@ -311,10 +312,10 @@ class TopicStarterPlugin(Star):
             recent_dialogue=recent_dialogue,
         )
 
-        try:
-            provider_id = await self.context.get_current_chat_provider_id(umo=stream.unified_msg_origin)
-        except Exception:
-            provider_id = ""
+        provider_id = await self._resolve_chat_provider_id(
+            preferred_provider_id=settings.chat_provider_id,
+            umo=stream.unified_msg_origin,
+        )
 
         if not provider_id:
             return fallback_text
@@ -330,9 +331,21 @@ class TopicStarterPlugin(Star):
             if text:
                 return text
         except Exception as exc:
-            logger.warning(f"[astrbot_plugin_topic_starter] llm_generate fallback triggered: {exc}")
+            logger.warning(
+                f"[astrbot_plugin_topic_starter] llm_generate fallback triggered: {exc}. "
+                f"provider_id={provider_id}"
+            )
 
         return fallback_text
+
+    async def _resolve_chat_provider_id(self, *, preferred_provider_id: str, umo: str) -> str:
+        if preferred_provider_id:
+            return preferred_provider_id
+
+        try:
+            return await self.context.get_current_chat_provider_id(umo=umo)
+        except Exception:
+            return ""
 
     async def _send_message(self, unified_msg_origin: str, content: str) -> bool:
         try:

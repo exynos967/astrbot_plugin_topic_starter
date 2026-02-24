@@ -37,6 +37,7 @@ class PluginSettings:
     cooldown_seconds: int
     silence_seconds: int
     message_window_size: int
+    chat_provider_id: str
     fallback_topics: list[str]
     quiet_hours: QuietHours
 
@@ -69,6 +70,7 @@ class PluginSettings:
             cooldown_seconds=cooldown_seconds,
             silence_seconds=silence_seconds,
             message_window_size=message_window_size,
+            chat_provider_id=as_non_empty_text(raw.get("chat_provider_id"), default=""),
             fallback_topics=fallback_topics,
             quiet_hours=quiet_hours,
         )

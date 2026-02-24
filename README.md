@@ -29,6 +29,12 @@ AstrBot 主动话题发起插件，提供话题管理与会话追踪能力。
 - `streams`: 绑定会话与触发时间
 - `messages`: 会话最近消息窗口
 
+## 配置建议
+
+- `chat_provider_id`：可在插件配置里固定一个 AstrBot 提供商模型（下拉选择）。
+- 留空时，插件会自动使用当前会话模型。
+- 若日志出现 `llm_generate fallback triggered: Connection error`，优先检查该提供商是否可用，或在插件配置中改用其他 provider。
+
 ## 特别感谢(灵感来源)
 
 - [ARC](https://github.com/A-Dawn) 本插件参考了他的A_Mind插件

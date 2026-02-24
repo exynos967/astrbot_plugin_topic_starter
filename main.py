@@ -87,16 +87,7 @@ class TopicStarterPlugin(Star):
     @filter.command("topic_bind")
     async def topic_bind(self, event: AstrMessageEvent):
         """绑定当前会话"""
-        now = time.time()
-        umo = event.unified_msg_origin
-        await self._store.bind_stream(
-            unified_msg_origin=umo,
-            session_name=self._build_session_name(event),
-            platform=self._safe_platform_name(event),
-            is_group=bool(self._safe_group_id(event)),
-            now=now,
-        )
-        await self._store.touch_user_message(umo, now=now)
+        await self._bind_stream_for_event(event)
 
         yield event.plain_result("✅ 已绑定当前会话，插件将在满足条件时主动发起话题。")
 
@@ -129,6 +120,7 @@ class TopicStarterPlugin(Star):
             f"- 冷却时间: {settings.cooldown_seconds}s",
             f"- 静默阈值: {settings.silence_seconds}s",
             f"- 最大字数: {settings.max_message_chars}",
+            f"- 收到消息自动绑定: {'开' if settings.auto_bind_on_message else '关'}",
             f"- 指定模型提供商: {settings.chat_provider_id or '自动使用当前会话'}",
         ]
 
@@ -211,14 +203,17 @@ class TopicStarterPlugin(Star):
         if not text or text.startswith("/"):
             return
 
+        settings = self._settings()
         umo = event.unified_msg_origin
+        now = time.time()
         stream = await self._store.get_stream(umo)
         if stream is None or not stream.active:
-            return
+            if not settings.auto_bind_on_message:
+                return
+            await self._bind_stream_for_event(event, now=now)
+        else:
+            await self._store.touch_user_message(umo, now=now)
 
-        now = time.time()
-        settings = self._settings()
-        await self._store.touch_user_message(umo, now=now)
         await self._store.append_message(
             unified_msg_origin=umo,
             sender_id=self._safe_sender_id(event),
@@ -379,15 +374,18 @@ class TopicStarterPlugin(Star):
         return await self._store.list_active_streams()
 
     async def _ensure_current_stream_bound(self, event: AstrMessageEvent) -> None:
-        now = time.time()
+        await self._bind_stream_for_event(event)
+
+    async def _bind_stream_for_event(self, event: AstrMessageEvent, *, now: float | None = None) -> None:
+        ts = now if now is not None else time.time()
         await self._store.bind_stream(
             unified_msg_origin=event.unified_msg_origin,
             session_name=self._build_session_name(event),
             platform=self._safe_platform_name(event),
             is_group=bool(self._safe_group_id(event)),
-            now=now,
+            now=ts,
         )
-        await self._store.touch_user_message(event.unified_msg_origin, now=now)
+        await self._store.touch_user_message(event.unified_msg_origin, now=ts)
 
     def _extract_payload(self, event: AstrMessageEvent, command: str) -> str:
         text = (event.message_str or "").strip()

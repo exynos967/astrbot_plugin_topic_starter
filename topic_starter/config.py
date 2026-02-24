@@ -37,6 +37,7 @@ class PluginSettings:
     cooldown_seconds: int
     silence_seconds: int
     message_window_size: int
+    auto_bind_on_message: bool
     max_message_chars: int
     chat_provider_id: str
     fallback_topics: list[str]
@@ -72,6 +73,7 @@ class PluginSettings:
             cooldown_seconds=cooldown_seconds,
             silence_seconds=silence_seconds,
             message_window_size=message_window_size,
+            auto_bind_on_message=as_bool(raw.get("auto_bind_on_message"), default=True),
             max_message_chars=max_message_chars,
             chat_provider_id=as_non_empty_text(raw.get("chat_provider_id"), default=""),
             fallback_topics=fallback_topics,

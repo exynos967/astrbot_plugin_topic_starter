@@ -87,7 +87,11 @@ class TopicStarterPlugin(Star):
     @filter.command("topic_bind")
     async def topic_bind(self, event: AstrMessageEvent):
         """绑定当前会话"""
-        await self._bind_stream_for_event(event)
+        settings = self._settings()
+        bound = await self._bind_stream_for_event(event, settings=settings)
+        if not bound:
+            yield event.plain_result("⛔ 当前群聊不在允许范围内，已拒绝绑定。")
+            return
 
         yield event.plain_result("✅ 已绑定当前会话，插件将在满足条件时主动发起话题。")
 
@@ -121,6 +125,8 @@ class TopicStarterPlugin(Star):
             f"- 静默阈值: {settings.silence_seconds}s",
             f"- 最大字数: {settings.max_message_chars}",
             f"- 收到消息自动绑定: {'开' if settings.auto_bind_on_message else '关'}",
+            f"- 群过滤模式: {settings.group_filter_mode}",
+            f"- 群过滤列表: {', '.join(settings.group_filter_ids) if settings.group_filter_ids else '(空)'}",
             f"- 指定模型提供商: {settings.chat_provider_id or '自动使用当前会话'}",
         ]
 
@@ -185,8 +191,11 @@ class TopicStarterPlugin(Star):
     @filter.command("topic_initiate")
     async def topic_initiate(self, event: AstrMessageEvent):
         """手动触发当前会话一次主动发言"""
-        await self._ensure_current_stream_bound(event)
         settings = self._settings()
+        bound = await self._bind_stream_for_event(event, settings=settings)
+        if not bound:
+            yield event.plain_result("⛔ 当前群聊不在允许范围内，无法手动触发。")
+            return
 
         sent_count, reasons = await self._run_tick(settings=settings, force=True, target_umo=event.unified_msg_origin)
         if sent_count > 0:
@@ -204,13 +213,18 @@ class TopicStarterPlugin(Star):
             return
 
         settings = self._settings()
+        if not self._is_event_allowed(event, settings):
+            return
+
         umo = event.unified_msg_origin
         now = time.time()
         stream = await self._store.get_stream(umo)
         if stream is None or not stream.active:
             if not settings.auto_bind_on_message:
                 return
-            await self._bind_stream_for_event(event, now=now)
+            bound = await self._bind_stream_for_event(event, settings=settings, now=now)
+            if not bound:
+                return
         else:
             await self._store.touch_user_message(umo, now=now)
 
@@ -257,6 +271,10 @@ class TopicStarterPlugin(Star):
             reasons: list[str] = []
 
             for stream in streams:
+                if not self._is_stream_allowed(stream, settings):
+                    reasons.append(f"{stream.session_name}:blocked_by_group_filter")
+                    continue
+
                 decision = self._decision_engine.should_initiate(stream, settings, now=now, force=force)
                 if not decision.should_send:
                     reasons.append(f"{stream.session_name}:{decision.reason}")
@@ -376,7 +394,17 @@ class TopicStarterPlugin(Star):
     async def _ensure_current_stream_bound(self, event: AstrMessageEvent) -> None:
         await self._bind_stream_for_event(event)
 
-    async def _bind_stream_for_event(self, event: AstrMessageEvent, *, now: float | None = None) -> None:
+    async def _bind_stream_for_event(
+        self,
+        event: AstrMessageEvent,
+        *,
+        settings: PluginSettings | None = None,
+        now: float | None = None,
+    ) -> bool:
+        current_settings = settings or self._settings()
+        if not self._is_event_allowed(event, current_settings):
+            return False
+
         ts = now if now is not None else time.time()
         await self._store.bind_stream(
             unified_msg_origin=event.unified_msg_origin,
@@ -386,6 +414,21 @@ class TopicStarterPlugin(Star):
             now=ts,
         )
         await self._store.touch_user_message(event.unified_msg_origin, now=ts)
+        return True
+
+    def _is_event_allowed(self, event: AstrMessageEvent, settings: PluginSettings) -> bool:
+        return settings.is_group_allowed(self._safe_group_id(event))
+
+    def _is_stream_allowed(self, stream: Any, settings: PluginSettings) -> bool:
+        if not getattr(stream, "is_group", False):
+            return True
+        group_id = self._extract_group_id_from_session_name(getattr(stream, "session_name", ""))
+        return settings.is_group_allowed(group_id)
+
+    def _extract_group_id_from_session_name(self, session_name: str) -> str:
+        if session_name.startswith("group:"):
+            return session_name.split(":", 1)[1].strip()
+        return ""
 
     def _extract_payload(self, event: AstrMessageEvent, command: str) -> str:
         text = (event.message_str or "").strip()
@@ -458,10 +501,11 @@ class TopicStarterPlugin(Star):
             f"{history}\n\n"
             "要求:\n"
             "1) 输出简体中文。\n"
-            f"2) {lower_bound}-{max_message_chars}字。\n"
-            "3) 语气自然，不要模板腔。\n"
-            "4) 结尾尽量带一个开放问题，引导群友回复。\n"
-            "5) 只输出最终发言内容，不要解释。"
+            f"2) 严格不超过 {max_message_chars} 字（包含标点与空格）。\n"
+            f"3) 推荐长度 {lower_bound}-{max_message_chars} 字，宁短勿长。\n"
+            "4) 语气自然，不要模板腔。\n"
+            "5) 结尾尽量带一个开放问题，引导群友回复。\n"
+            "6) 只输出最终发言内容，不要解释。"
         )
 
     def _truncate_text(self, text: str, max_chars: int) -> str:

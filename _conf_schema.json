@@ -36,6 +36,23 @@
     "hint": "开启后无需手动 `/topic_bind`，会在首次普通消息时自动绑定。",
     "default": true
   },
+  "group_filter_mode": {
+    "type": "string",
+    "description": "群聊过滤模式",
+    "hint": "none=不过滤；whitelist=仅列表内群生效；blacklist=屏蔽列表内群。",
+    "options": [
+      "none",
+      "whitelist",
+      "blacklist"
+    ],
+    "default": "none"
+  },
+  "group_filter_ids": {
+    "type": "list",
+    "description": "群号列表",
+    "hint": "在 whitelist/blacklist 模式下生效，可填写群号，如 [\"123456\", \"987654\"]。",
+    "default": []
+  },
   "max_message_chars": {
     "type": "int",
     "description": "主动发言最大字数",

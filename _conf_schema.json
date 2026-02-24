@@ -30,6 +30,12 @@
     "description": "每个会话保留的最近消息条数",
     "default": 20
   },
+  "max_message_chars": {
+    "type": "int",
+    "description": "主动发言最大字数",
+    "hint": "用于限制最终发送内容长度，避免消息过长。",
+    "default": 20
+  },
   "chat_provider_id": {
     "type": "string",
     "description": "指定用于主动发言文案生成的模型提供商（可选）",

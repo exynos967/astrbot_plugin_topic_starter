@@ -135,6 +135,7 @@ class TopicStarterPlugin(Star):
             f"- 触发概率: {settings.trigger_probability:.2f}",
             f"- 冷却时间: {settings.cooldown_seconds}s",
             f"- 静默阈值: {settings.silence_seconds}s",
+            f"- 最大字数: {settings.max_message_chars}",
             f"- 指定模型提供商: {settings.chat_provider_id or '自动使用当前会话'}",
         ]
 
@@ -311,6 +312,7 @@ class TopicStarterPlugin(Star):
             topic=topic,
             recent_dialogue=recent_dialogue,
         )
+        fallback_text = self._truncate_text(fallback_text, settings.max_message_chars)
 
         provider_id = await self._resolve_chat_provider_id(
             preferred_provider_id=settings.chat_provider_id,
@@ -320,14 +322,18 @@ class TopicStarterPlugin(Star):
         if not provider_id:
             return fallback_text
 
-        prompt = self._build_llm_prompt(topic=topic, recent_dialogue=recent_dialogue)
+        prompt = self._build_llm_prompt(
+            topic=topic,
+            recent_dialogue=recent_dialogue,
+            max_message_chars=settings.max_message_chars,
+        )
 
         try:
             resp = await self.context.llm_generate(
                 chat_provider_id=provider_id,
                 prompt=prompt,
             )
-            text = (getattr(resp, "completion_text", "") or "").strip()
+            text = self._truncate_text((getattr(resp, "completion_text", "") or "").strip(), settings.max_message_chars)
             if text:
                 return text
         except Exception as exc:
@@ -448,9 +454,10 @@ class TopicStarterPlugin(Star):
         except Exception:
             return "unknown"
 
-    def _build_llm_prompt(self, *, topic: SelectedTopic, recent_dialogue: list[str]) -> str:
+    def _build_llm_prompt(self, *, topic: SelectedTopic, recent_dialogue: list[str], max_message_chars: int) -> str:
         history = "\n".join(recent_dialogue[:12]) if recent_dialogue else "(最近消息为空)"
         topic_desc = topic.description or "请围绕该话题抛出一个自然的问题。"
+        lower_bound = min(50, max_message_chars)
         return (
             "你是群聊里的自然参与者，不要自称机器人。"
             "基于最近聊天上下文，发一条简短且自然的引导发言。\n\n"
@@ -460,11 +467,18 @@ class TopicStarterPlugin(Star):
             f"{history}\n\n"
             "要求:\n"
             "1) 输出简体中文。\n"
-            "2) 50-120字。\n"
+            f"2) {lower_bound}-{max_message_chars}字。\n"
             "3) 语气自然，不要模板腔。\n"
             "4) 结尾尽量带一个开放问题，引导群友回复。\n"
             "5) 只输出最终发言内容，不要解释。"
         )
+
+    def _truncate_text(self, text: str, max_chars: int) -> str:
+        if max_chars <= 0:
+            return ""
+        if len(text) <= max_chars:
+            return text
+        return text[:max_chars]
 
     def _format_elapsed(self, ts: float) -> str:
         if ts <= 0:

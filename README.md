@@ -31,6 +31,7 @@ AstrBot 主动话题发起插件，提供话题管理与会话追踪能力。
 
 ## 配置建议
 
+- `max_message_chars`：主动发言最大字数限制（默认 120）。
 - `chat_provider_id`：可在插件配置里固定一个 AstrBot 提供商模型（下拉选择）。
 - 留空时，插件会自动使用当前会话模型。
 - 若日志出现 `llm_generate fallback triggered: Connection error`，优先检查该提供商是否可用，或在插件配置中改用其他 provider。

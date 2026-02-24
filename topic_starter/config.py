@@ -37,6 +37,7 @@ class PluginSettings:
     cooldown_seconds: int
     silence_seconds: int
     message_window_size: int
+    max_message_chars: int
     chat_provider_id: str
     fallback_topics: list[str]
     quiet_hours: QuietHours
@@ -62,6 +63,7 @@ class PluginSettings:
         cooldown_seconds = max(as_int(raw.get("cooldown_seconds"), default=1800), 0)
         silence_seconds = max(as_int(raw.get("silence_seconds"), default=600), 0)
         message_window_size = max(as_int(raw.get("message_window_size"), default=20), 1)
+        max_message_chars = max(as_int(raw.get("max_message_chars"), default=120), 20)
 
         return cls(
             enabled=as_bool(raw.get("enabled"), default=True),
@@ -70,6 +72,7 @@ class PluginSettings:
             cooldown_seconds=cooldown_seconds,
             silence_seconds=silence_seconds,
             message_window_size=message_window_size,
+            max_message_chars=max_message_chars,
             chat_provider_id=as_non_empty_text(raw.get("chat_provider_id"), default=""),
             fallback_topics=fallback_topics,
             quiet_hours=quiet_hours,

@@ -6,7 +6,7 @@ from typing import Any, Mapping
 
 from astrbot.api import logger
 from astrbot.api.event import AstrMessageEvent, MessageChain, filter
-from astrbot.api.star import Context, Star, register
+from astrbot.api.star import Context, Star
 
 try:
     from astrbot.api import AstrBotConfig
@@ -43,13 +43,6 @@ DEFAULT_FALLBACK_TOPICS = [
 ]
 
 
-@register(
-    "astrbot_plugin_topic_starter",
-    "薄暝",
-    "主动话题发起、会话跟踪、可配置调度",
-    "0.1.0",
-    "https://github.com/AstrBotDevs/AstrBot",
-)
 class TopicStarterPlugin(Star):
     def __init__(self, context: Context, config: AstrBotConfig | None = None):
         super().__init__(context)

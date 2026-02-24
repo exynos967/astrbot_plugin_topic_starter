@@ -1,0 +1,1 @@
+# This plugin currently uses only AstrBot built-in APIs and Python standard library.

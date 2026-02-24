@@ -1,0 +1,64 @@
+{
+  "enabled": {
+    "type": "bool",
+    "description": "是否启用主动话题发起",
+    "default": true
+  },
+  "tick_interval_seconds": {
+    "type": "int",
+    "description": "调度检查间隔（秒）",
+    "default": 300,
+    "hint": "建议 >= 60，间隔越短触发越频繁。"
+  },
+  "trigger_probability": {
+    "type": "float",
+    "description": "每次调度触发概率（0-1）",
+    "default": 0.3
+  },
+  "cooldown_seconds": {
+    "type": "int",
+    "description": "同一会话主动发言冷却时间（秒）",
+    "default": 1800
+  },
+  "silence_seconds": {
+    "type": "int",
+    "description": "会话静默阈值（秒），低于该值不主动发言",
+    "default": 600
+  },
+  "message_window_size": {
+    "type": "int",
+    "description": "每个会话保留的最近消息条数",
+    "default": 20
+  },
+  "fallback_topics": {
+    "type": "list",
+    "description": "兜底话题列表。格式：标题|描述",
+    "default": [
+      "最近最实用的 AI 工具你推荐哪个？|可以从工作、学习或娱乐角度聊聊。",
+      "最近有哪部电影或剧值得补？|聊聊你最推荐的一部和理由。",
+      "你现在最想提升的一项能力是什么？|为什么会选它？",
+      "如果周末只做一件让你恢复精力的事，会选什么？|分享你的方式。"
+    ]
+  },
+  "quiet_hours": {
+    "type": "object",
+    "description": "免打扰时段配置",
+    "items": {
+      "enabled": {
+        "type": "bool",
+        "description": "是否启用免打扰时段",
+        "default": false
+      },
+      "start": {
+        "type": "string",
+        "description": "免打扰开始时间（HH:MM）",
+        "default": "23:00"
+      },
+      "end": {
+        "type": "string",
+        "description": "免打扰结束时间（HH:MM）",
+        "default": "08:00"
+      }
+    }
+  }
+}
